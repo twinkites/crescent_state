@@ -4,6 +4,7 @@ Place your orb each day. Watch your constellation grow.
 
 Find peace in your Crescent State.
 
+https://twinkites.github.io/crescent_state/
 
 **How it works**
 
