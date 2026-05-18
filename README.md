@@ -4,7 +4,6 @@ Place your orb each day. Watch your constellation grow.
 
 Find peace in your Crescent State.
 
----
 
 **How it works**
 
@@ -20,6 +19,5 @@ Everything lives in your browser. Nothing is sent anywhere. Use export / import 
 
 I hope you enjoy and find peace in your crescent state.
 
----
 
 Built by [Twin Kites LLC](https://twinkites.com)
