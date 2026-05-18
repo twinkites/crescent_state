@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#080812">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Crescent State">
+  <title>Crescent State: Wax &amp; Wane</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #080812;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      touch-action: none;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+
+    #ui {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+               env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    }
+
+    #top {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 24px 0;
+    }
+
+    .app-title {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.22);
+    }
+
+    #streak {
+      font-size: 11px; color: rgba(255,255,255,0.22);
+      letter-spacing: 0.06em;
+    }
+    #streak b { color: rgba(255,255,255,0.5); font-weight: 600; }
+
+    #bottom {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 7px; padding: 0 24px max(24px, env(safe-area-inset-bottom, 24px));
+    }
+
+    #mood-text {
+      font-size: 21px; font-weight: 300;
+      color: rgba(255,255,255,0.78);
+      letter-spacing: 0.1em;
+      min-height: 28px;
+      transition: opacity 0.18s;
+    }
+
+    #mood-sub {
+      font-size: 11px; font-style: italic; font-weight: 300;
+      color: rgba(255,255,255,0.32);
+      letter-spacing: 0.06em;
+      min-height: 16px;
+      text-align: center;
+      transition: opacity 0.4s;
+    }
+
+    #date-text {
+      font-size: 10px; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+
+    #phase-text {
+      font-size: 10px; color: rgba(195, 212, 238, 0.28);
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    #sound-btn {
+      pointer-events: all;
+      margin-top: 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.28);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 11px; letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.25s, border-color 0.25s, color 0.25s;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #sound-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+    #sound-btn.on {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.65);
+    }
+
+    #data-btns {
+      display: flex; gap: 8px;
+      pointer-events: all;
+    }
+    .data-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.22);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .data-btn:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.45); border-color: rgba(255,255,255,0.14); }
+
+    #toast {
+      position: fixed; bottom: max(110px, calc(env(safe-area-inset-bottom, 0px) + 90px)); left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.55); padding: 7px 18px; border-radius: 20px;
+      font-size: 11px; letter-spacing: 0.08em;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    #attribution {
+      font-size: 9px; color: rgba(255,255,255,0.1);
+      letter-spacing: 0.07em; text-align: center; line-height: 1.8;
+    }
+
+    #moons-btn {
+      background: none; border: none;
+      color: rgba(195,212,238,0.18);
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; font-family: inherit; padding: 2px 0;
+      pointer-events: all;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #moons-btn:hover { color: rgba(195,212,238,0.42); }
+
+    #moon-hover {
+      position: fixed; border-radius: 50%; z-index: 1; cursor: default;
+    }
+    #moon-hover::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+      background: rgba(10,10,22,0.92); border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.58); padding: 5px 13px; border-radius: 12px;
+      font-size: 10px; letter-spacing: 0.08em; font-family: -apple-system,sans-serif;
+      white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.18s;
+    }
+    #moon-hover:hover::after { opacity: 1; }
+
+    #moons-panel {
+      position: fixed; inset: 0; z-index: 20;
+      background: #080812;
+      transform: translateY(100%);
+      transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      display: flex; flex-direction: column;
+    }
+    #moons-panel.open { transform: translateY(0); }
+
+    #moons-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 24px 0; flex-shrink: 0;
+    }
+    .moons-title {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.22);
+    }
+    #moons-close {
+      background: none; border: none; color: rgba(255,255,255,0.28);
+      font-size: 20px; line-height: 1; cursor: pointer;
+      padding: 4px; font-family: inherit;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #moons-close:hover { color: rgba(255,255,255,0.6); }
+
+    #moons-scroll {
+      flex: 1; overflow-y: auto; padding: 0 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #moons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 20px 12px;
+      padding: 20px 0 8px;
+    }
+    .moon-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .moon-date { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 0.05em; }
+    .moon-word { font-size: 10px; color: rgba(255,255,255,0.42); letter-spacing: 0.05em; }
+
+    #moons-footer {
+      padding: 20px 0 44px;
+      font-size: 9px; color: rgba(255,255,255,0.1);
+      letter-spacing: 0.08em; text-align: center;
+      line-height: 1.9; text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="moon-hover"></div>
+<div id="ui">
+  <div id="top">
+    <span class="app-title">Crescent State</span>
+    <span id="streak">streak <b id="streak-n">—</b></span>
+  </div>
+  <div id="bottom">
+    <div id="mood-text" aria-live="polite" aria-atomic="true"></div>
+    <div id="mood-sub"></div>
+    <div id="date-text"></div>
+    <div id="phase-text"></div>
+    <button id="sound-btn" aria-label="Toggle ambient sound">♪ ambient</button>
+    <div id="data-btns">
+      <button class="data-btn" id="export-btn" aria-label="Export mood data as JSON">export</button>
+      <button class="data-btn" id="import-btn" aria-label="Import mood data from JSON">import</button>
+    </div>
+    <button id="moons-btn" aria-label="View all mood moons">your moons</button>
+    <div id="attribution">
+      all data stored in your browser · never shared<br>
+      built for you by twin kites llc
+    </div>
+  </div>
+</div>
+<input type="file" id="import-input" accept=".json" style="display:none">
+<div id="toast"></div>
+
+<div id="moons-panel">
+  <div id="moons-header">
+    <span class="moons-title">your moons</span>
+    <button id="moons-close">✕</button>
+  </div>
+  <div id="moons-scroll">
+    <div id="moons-grid"></div>
+    <div id="moons-footer">
+      all data stored in your browser · never shared<br>
+      built for you by twin kites llc
+    </div>
+  </div>
+</div>
+<script>
+// ─── data & constants ────────────────────────────────────────────────────────
+
+const KEY = 'crescentstate_v1';
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateLabel(d) {
+  return new Date(d + 'T12:00:00').toLocaleDateString('en', { weekday:'long', month:'long', day:'numeric' });
+}
+
+const TODAY = todayStr();
+
+// Corner colors [R,G,B] for bilinear interpolation
+// nx: 0=calm(left)  → 1=activated(right)
+// ny: 0=unpleasant(bottom) → 1=pleasant(top)
+const CORNER = {
+  tl: [85,  210, 175],  // calm+pleasant     → content / serene
+  tr: [255, 192,  52],  // activated+pleasant → excited / joyful
+  bl: [80,   80, 190],  // calm+unpleasant   → tired / sad
+  br: [215,  58,  80],  // activated+unpleasant → tense / anxious
+};
+
+// ─── moon phase ──────────────────────────────────────────────────────────────
+
+(function() {
+  // Known new moon: 6 Jan 2000 18:14 UTC
+  const REF   = Date.UTC(2000, 0, 6, 18, 14);
+  const CYCLE = 29.53059 * 86400000;
+  window._MOON_PHASE = ((Date.now() - REF) % CYCLE + CYCLE) % CYCLE / CYCLE;
+})();
+const MOON_PHASE = window._MOON_PHASE;
+const MOON_ILLUM = (1 - Math.cos(MOON_PHASE * Math.PI * 2)) / 2;  // 0=new, 1=full
+
+function moonPhaseName(p) {
+  if (p < 0.025 || p > 0.975) return 'new moon';
+  if (p < 0.24)  return 'waxing crescent';
+  if (p < 0.26)  return 'first quarter';
+  if (p < 0.49)  return 'waxing gibbous';
+  if (p < 0.51)  return 'full moon';
+  if (p < 0.74)  return 'waning gibbous';
+  if (p < 0.76)  return 'last quarter';
+  return 'waning crescent';
+}
+
+// ─── state ───────────────────────────────────────────────────────────────────
+
+let entries = [];          // [{date,x,y}]
+let ox = 0.5, oy = 0.5;   // today's orb (normalized 0–1)
+let dragging = false;
+let placed   = false;      // has user placed today's orb?
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+const lerp  = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function bilerp(nx, ny) {
+  const C = CORNER;
+  const bot = [lerp(C.bl[0],C.br[0],nx), lerp(C.bl[1],C.br[1],nx), lerp(C.bl[2],C.br[2],nx)];
+  const top = [lerp(C.tl[0],C.tr[0],nx), lerp(C.tl[1],C.tr[1],nx), lerp(C.tl[2],C.tr[2],nx)];
+  return [lerp(bot[0],top[0],ny), lerp(bot[1],top[1],ny), lerp(bot[2],top[2],ny)];
+}
+
+function rgba(rgb, a) {
+  return `rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},${a})`;
+}
+
+// 5×5 emotion grid — row 0 = very unpleasant (bottom), col 0 = very calm (left)
+const WORDS = [
+  ['depleted',  'hollow',    'defeated',  'distressed', 'frantic'  ],
+  ['tired',     'weary',     'low',       'anxious',    'tense'    ],
+  ['still',     'composed',  'okay',      'alert',      'wired'    ],
+  ['content',   'relaxed',   'good',      'cheerful',   'excited'  ],
+  ['serene',    'blissful',  'grateful',  'joyful',     'euphoric' ],
+];
+
+// Encouragement messages for the 10 low-mood words (WORDS rows 0 and 1)
+const ENCOURAGEMENTS = {
+  depleted:   "even the moon goes dark to rest",
+  hollow:     "you've been carrying a lot",
+  defeated:   "this feeling won't last forever",
+  distressed: "it's okay to ask for help",
+  frantic:    "one breath at a time",
+  tired:      "rest is part of the rhythm",
+  weary:      "be gentle with yourself",
+  low:        "you're allowed to feel this",
+  anxious:    "take a breath — you've got this",
+  tense:      "one thing at a time",
+};
+
+function getLunarReflection() {
+  const past = entries.filter(e => e.date !== TODAY);
+  if (!past.length) return '';
+  const target = Date.now() - 29.53059 * 86400000;
+  let closest = null, minDiff = Infinity;
+  for (const e of past) {
+    const diff = Math.abs(new Date(e.date + 'T12:00:00').getTime() - target);
+    if (diff < minDiff) { minDiff = diff; closest = e; }
+  }
+  if (minDiff > 8 * 86400000) return '';
+  return `one cycle ago · ${moodWord(closest.x, closest.y)}`;
+}
+
+let _currentSub = null;
+let _subTimer   = null;
+function updateMoodSub(word) {
+  const enc = ENCOURAGEMENTS[word];
+  const sub = enc || (placed ? getLunarReflection() : '');
+  if (sub === _currentSub) return;
+  _currentSub = sub;
+  const el = document.getElementById('mood-sub');
+  clearTimeout(_subTimer);
+  el.style.opacity = '0';
+  _subTimer = setTimeout(() => {
+    el.textContent = sub;
+    el.style.opacity = sub ? '1' : '0';
+  }, enc ? 1400 : 180);
+}
+
+let _currentWord = '';
+let _wordTimer = null;
+function setMoodWord(word) {
+  if (word === _currentWord) return;
+  _currentWord = word;
+  const el = document.getElementById('mood-text');
+  clearTimeout(_wordTimer);
+  el.style.opacity = '0';
+  _wordTimer = setTimeout(() => { el.textContent = word; el.style.opacity = '1'; }, 160);
+  updateMoodSub(word);
+}
+
+function moodWord(nx, ny) {
+  const col = Math.min(4, Math.floor(nx * 5));
+  const row = Math.min(4, Math.floor(ny * 5));
+  return WORDS[row][col];
+}
+
+// ─── layout ──────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, DPR, plot, stars = [];
+let bgRgb = [8, 8, 18];  // smoothly tinted background
+let moonX, moonY, moonR;
+
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W   = window.innerWidth;
+  H   = window.innerHeight;
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const short = Math.min(W, H);
+  const padX  = short * 0.13;
+  const padY  = short * 0.06;
+  const topOff    = 68;
+  const bottomOff = 278;
+  plot = { x: padX, y: topOff + padY, w: W - padX * 2, h: H - topOff - padY - bottomOff };
+
+  // Moon sits centered in the gap between the top bar and the grid
+  moonR = Math.min(W, H) * 0.028;
+  moonX = W / 2;
+  moonY = topOff + (plot.y - topOff) / 2;
+
+  // Position the hover target over the moon
+  const mh = document.getElementById('moon-hover');
+  const mhSize = moonR * 2 + 14;
+  mh.style.width  = mhSize + 'px';
+  mh.style.height = mhSize + 'px';
+  mh.style.left   = (moonX - mhSize / 2) + 'px';
+  mh.style.top    = (moonY - mhSize / 2) + 'px';
+
+  // More stars on new moon (dimmed by moonlight on full moon)
+  const count = Math.round(lerp(110, 55, MOON_ILLUM));
+  stars = Array.from({ length: count }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    r: Math.random() * 1.1 + 0.2,
+    a: Math.random() * 0.3 + 0.05
+  }));
+}
+
+// normalized ↔ canvas
+function n2c(nx, ny) {
+  return { x: plot.x + nx * plot.w, y: plot.y + (1 - ny) * plot.h };
+}
+function c2n(cx, cy) {
+  return {
+    nx: clamp((cx - plot.x) / plot.w, 0, 1),
+    ny: clamp(1 - (cy - plot.y) / plot.h, 0, 1),
+  };
+}
+
+// ─── persistence ─────────────────────────────────────────────────────────────
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || '[]');
+    entries = (Array.isArray(raw) ? raw : []).filter(
+      e => e && e.date && typeof e.x === 'number' && typeof e.y === 'number'
+        && e.x >= 0 && e.x <= 1 && e.y >= 0 && e.y <= 1
+    );
+  } catch { entries = []; }
+  const t = entries.find(e => e.date === TODAY);
+  if (t) { ox = t.x; oy = t.y; placed = true; }
+}
+
+function save() {
+  const i = entries.findIndex(e => e.date === TODAY);
+  const entry = { date: TODAY, x: ox, y: oy };
+  if (i >= 0) entries[i] = entry;
+  else { entries.push(entry); entries.sort((a, b) => a.date < b.date ? -1 : 1); }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(entries));
+  } catch {
+    showToast('storage full — data not saved');
+  }
+  placed = true;
+  updateStreak();
+  setMoodWord(moodWord(ox, oy));
+}
+
+let saveTimer;
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 500);
+}
+
+// ─── streak ──────────────────────────────────────────────────────────────────
+
+function calcStreak() {
+  const d = new Date(); let streak = 0;
+  while (true) {
+    const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (!entries.find(e => e.date === s)) break;
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function updateStreak() {
+  const n = calcStreak();
+  document.getElementById('streak-n').textContent = n === 0 ? '—' : n + (n === 1 ? ' day' : ' days');
+}
+
+// ─── audio ───────────────────────────────────────────────────────────────────
+
+let ac, osc1, osc2, filt, masterGain, soundOn = false;
+
+function buildAudio() {
+  if (ac) return;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Synthetic reverb impulse response
+  const len = ac.sampleRate * 2.8;
+  const ir  = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++)
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+  }
+  const rev = ac.createConvolver();
+  rev.buffer = ir;
+
+  filt = ac.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.Q.value = 0.7;
+
+  masterGain = ac.createGain();
+  masterGain.gain.value = 0;
+
+  const dryG = ac.createGain(); dryG.gain.value = 0.6;
+  const wetG = ac.createGain(); wetG.gain.value = 0.4;
+
+  osc1 = ac.createOscillator(); osc1.type = 'sine';
+  osc2 = ac.createOscillator(); osc2.type = 'sine';
+  const g2 = ac.createGain(); g2.gain.value = 0.32;
+
+  osc1.connect(filt);
+  osc2.connect(g2); g2.connect(filt);
+  filt.connect(dryG); filt.connect(rev);
+  rev.connect(wetG);
+  dryG.connect(masterGain); wetG.connect(masterGain);
+  masterGain.connect(ac.destination);
+
+  osc1.start(); osc2.start();
+}
+
+function syncAudio(nx, ny) {
+  if (!ac || !soundOn) return;
+  const t = ac.currentTime, r = 0.7;
+  // Pleasant → higher pitch; activated → slight harmonic sharpening
+  const freq  = lerp(65, 220, ny);
+  const ratio = lerp(1.497, 1.516, nx);   // pure fifth → slightly sharp
+  osc1.frequency.setTargetAtTime(freq, t, r);
+  osc2.frequency.setTargetAtTime(freq * ratio, t, r);
+  // Activated → brighter filter
+  filt.frequency.setTargetAtTime(lerp(220, 2000, nx), t, r);
+}
+
+function toggleSound() {
+  const btn = document.getElementById('sound-btn');
+  if (!soundOn) {
+    buildAudio();
+    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    masterGain.gain.setTargetAtTime(0.26, ac.currentTime, 0.8);
+    soundOn = true;
+    btn.classList.add('on');
+    btn.textContent = '♪ on';
+    syncAudio(ox, oy);
+  } else {
+    masterGain.gain.setTargetAtTime(0, ac.currentTime, 0.8);
+    soundOn = false;
+    btn.classList.remove('on');
+    btn.textContent = '♪ ambient';
+  }
+}
+
+// ─── draw: moon ──────────────────────────────────────────────────────────────
+
+function drawMoon() {
+  const r     = moonR;
+  const cx    = moonX;
+  const cy    = moonY;
+  const phase = MOON_PHASE;
+  const illum = MOON_ILLUM;
+
+  // Moonlight glow — expands and brightens toward full moon
+  if (illum > 0.04) {
+    const glowR = r * (2.5 + illum * 3.5);
+    const g = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, glowR);
+    g.addColorStop(0, `rgba(195,210,238,${illum * 0.18})`);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Clip to moon disk and draw phase
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+
+  // Dark fill matching sky
+  ctx.fillStyle = rgba(bgRgb, 1);
+  ctx.fillRect(cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+
+  if (illum > 0.01) {
+    ctx.translate(cx, cy);
+
+    // rx: x-radius of the terminator ellipse
+    // positive = crescent side lit, negative = gibbous
+    const rx = r * Math.cos(phase * Math.PI * 2);
+
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(205,218,240,0.92)';
+
+    if (phase < 0.5) {
+      // Waxing: lit on the right
+      ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);    // right semicircle
+      ctx.bezierCurveTo(rx * (4 / 3), r, rx * (4 / 3), -r, 0, -r);
+    } else {
+      // Waning: lit on the left
+      ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);    // left semicircle
+      ctx.bezierCurveTo(-rx * (4 / 3), -r, -rx * (4 / 3), r, 0, r);
+    }
+
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Subtle rim visible even on dark side
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(180,196,222,${0.07 + illum * 0.1})`;
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+}
+
+// ─── draw: background ────────────────────────────────────────────────────────
+
+function drawBackground() {
+  // Slowly tint background toward a dark wash of today's mood color
+  const m = bilerp(ox, oy);
+  bgRgb[0] = lerp(bgRgb[0], 5 + m[0] * 0.05, 0.018);
+  bgRgb[1] = lerp(bgRgb[1], 5 + m[1] * 0.05, 0.018);
+  bgRgb[2] = lerp(bgRgb[2], 8 + m[2] * 0.06, 0.018);
+
+  ctx.fillStyle = rgba(bgRgb, 1);
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars dim under moonlight — full moon washes them out
+  const starDim = 1 - MOON_ILLUM * 0.65;
+  for (const s of stars) {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${s.a * starDim})`;
+    ctx.fill();
+  }
+
+  drawMoon();
+}
+
+// ─── draw: heatmap ───────────────────────────────────────────────────────────
+
+function drawHeatmap() {
+  if (!entries.length) return;
+  const { x, y, w, h } = plot;
+  const blobR = Math.min(w, h) * 0.14;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  for (const e of entries) {
+    const pos = n2c(e.x, e.y);
+    const rgb = bilerp(e.x, e.y);
+    const g = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, blobR);
+    g.addColorStop(0, rgba(rgb, 0.06));
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, blobR, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── draw: grid ──────────────────────────────────────────────────────────────
+
+function drawGrid() {
+  const { x, y, w, h } = plot;
+  const cx = x + w / 2, cy = y + h / 2;
+
+  ctx.save();
+
+  // Quadrant color washes
+  for (const [nx, ny, key] of [[0.25,0.75,'tl'],[0.75,0.75,'tr'],[0.25,0.25,'bl'],[0.75,0.25,'br']]) {
+    const p = n2c(nx, ny);
+    const r = Math.max(w, h) * 0.4;
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0, rgba(CORNER[key], 0.07));
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  drawHeatmap();
+
+  // Border
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  // Center cross
+  ctx.setLineDash([3, 8]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, y); ctx.lineTo(cx, y + h);
+  ctx.moveTo(x, cy); ctx.lineTo(x + w, cy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Axis labels (inside, near edges)
+  ctx.font = '10px -apple-system,sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.textAlign = 'center';
+  ctx.fillText('pleasant',   cx, y + 16);
+  ctx.fillText('unpleasant', cx, y + h - 8);
+
+  ctx.save();
+  ctx.translate(x + 14, cy);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('calm', 0, 0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(x + w - 14, cy);
+  ctx.rotate(Math.PI / 2);
+  ctx.fillText('activated', 0, 0);
+  ctx.restore();
+
+  // Corner micro-labels
+  ctx.font = '9px -apple-system,sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.textAlign = 'left';  ctx.fillText('content', x + 8,     y + 30);
+  ctx.textAlign = 'right'; ctx.fillText('excited',  x + w - 8, y + 30);
+  ctx.textAlign = 'left';  ctx.fillText('tired',    x + 8,     y + h - 20);
+  ctx.textAlign = 'right'; ctx.fillText('tense',    x + w - 8, y + h - 20);
+
+  ctx.restore();
+}
+
+// ─── draw: history constellation ─────────────────────────────────────────────
+
+function drawHistory() {
+  const past = entries.filter(e => e.date !== TODAY);
+  if (!past.length) return;
+
+  // Build full sequence including today if placed
+  const all = [...past, ...(placed ? [{ date: TODAY, x: ox, y: oy }] : [])];
+
+  // Connection lines
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const p0 = n2c(all[0].x, all[0].y);
+  ctx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < all.length; i++) {
+    const p = n2c(all[i].x, all[i].y);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // Past orbs (fading with age)
+  const maxAge = Math.max(1, past.length - 1);
+  for (let i = 0; i < past.length; i++) {
+    const e   = past[i];
+    const pos = n2c(e.x, e.y);
+    const rgb = bilerp(e.x, e.y);
+    const age = past.length - 1 - i;   // 0 = most recent past
+    const t   = age / maxAge;
+    const alpha = lerp(0.72, 0.12, t);
+    const r     = lerp(9, 4, t);
+
+    // Soft glow
+    const g = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r * 3);
+    g.addColorStop(0, rgba(rgb, alpha * 0.45));
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, r * 3, 0, Math.PI * 2); ctx.fill();
+
+    // Core dot
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(rgb, alpha);
+    ctx.fill();
+
+    // Date label on most-recent past only
+    if (age === 0) {
+      const label = new Date(e.date + 'T12:00:00').toLocaleDateString('en', { month:'short', day:'numeric' });
+      ctx.font = '8px -apple-system,sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, pos.x, pos.y - r - 5);
+    }
+  }
+}
+
+// ─── draw: today's orb ───────────────────────────────────────────────────────
+
+function drawOrb(ts) {
+  const pos  = n2c(ox, oy);
+  const rgb  = bilerp(ox, oy);
+  const pulse = Math.sin(ts * 0.0018) * 0.035;
+  const R     = 22 * (1 + pulse);
+
+  // Outer halos
+  for (let i = 3; i >= 1; i--) {
+    const hr = R * (1 + i * 0.95);
+    const g  = ctx.createRadialGradient(pos.x, pos.y, R * 0.4, pos.x, pos.y, hr);
+    g.addColorStop(0, rgba(rgb, 0.09 / i));
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, hr, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Main glow
+  const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, R * 2.4);
+  glow.addColorStop(0,    rgba(rgb, 0.52));
+  glow.addColorStop(0.45, rgba(rgb, 0.18));
+  glow.addColorStop(1,    'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(pos.x, pos.y, R * 2.4, 0, Math.PI * 2); ctx.fill();
+
+  // Sphere body
+  const hi  = [Math.min(255, rgb[0]+65), Math.min(255, rgb[1]+65), Math.min(255, rgb[2]+65)];
+  const sph = ctx.createRadialGradient(pos.x - R*0.28, pos.y - R*0.32, 0, pos.x, pos.y, R);
+  sph.addColorStop(0, rgba(hi,  1));
+  sph.addColorStop(1, rgba(rgb, 0.92));
+  ctx.fillStyle = sph;
+  ctx.beginPath(); ctx.arc(pos.x, pos.y, R, 0, Math.PI * 2); ctx.fill();
+
+  // Specular highlight
+  ctx.beginPath(); ctx.arc(pos.x - R*0.3, pos.y - R*0.34, R * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.42)';
+  ctx.fill();
+
+  // Orbiting micro-particles
+  for (let i = 0; i < 6; i++) {
+    const a    = ts * 0.0006 + i * Math.PI / 3;
+    const dist = R * (1.85 + 0.18 * Math.sin(ts * 0.0022 + i * 1.2));
+    ctx.beginPath();
+    ctx.arc(pos.x + Math.cos(a) * dist, pos.y + Math.sin(a) * dist, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(rgb, 0.55);
+    ctx.fill();
+  }
+
+  // Drag-hint ring + prompt text if not yet placed today
+  if (!placed) {
+    const ringR = R * 2.1 + 6 * Math.sin(ts * 0.0025);
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(rgb, 0.25);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font = '11px -apple-system,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'center';
+    ctx.fillText('drag to place your mood', pos.x, pos.y + R * 3.2);
+  }
+
+  // "today" label once placed
+  if (placed) {
+    ctx.font = '8px -apple-system,sans-serif';
+    ctx.fillStyle = rgba(rgb, 0.55);
+    ctx.textAlign = 'center';
+    ctx.fillText('today', pos.x, pos.y - R - 7);
+  }
+}
+
+// ─── animation loop ───────────────────────────────────────────────────────────
+
+function render(ts) {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawGrid();
+  drawHistory();
+  drawOrb(ts);
+  requestAnimationFrame(render);
+}
+
+// ─── interaction ─────────────────────────────────────────────────────────────
+
+function evtPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const s = e.touches ? e.touches[0] : e;
+  return { cx: s.clientX - r.left, cy: s.clientY - r.top };
+}
+
+function nearOrb(cx, cy) {
+  const p = n2c(ox, oy);
+  return Math.hypot(cx - p.x, cy - p.y) < 48;
+}
+
+canvas.addEventListener('mousedown', e => {
+  const { cx, cy } = evtPos(e);
+  if (nearOrb(cx, cy)) dragging = true;
+});
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const { cx, cy } = evtPos(e);
+  if (nearOrb(cx, cy)) dragging = true;
+}, { passive: false });
+
+function onMove(e) {
+  if (!dragging) return;
+  if (e.cancelable) e.preventDefault();
+  const { cx, cy } = evtPos(e);
+  const { nx, ny } = c2n(cx, cy);
+  ox = nx; oy = ny;
+  setMoodWord(moodWord(ox, oy));
+  syncAudio(ox, oy);
+  debouncedSave();
+}
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', onMove, { passive: false });
+
+function onUp() {
+  if (dragging) { dragging = false; save(); }
+}
+window.addEventListener('mouseup',  onUp);
+window.addEventListener('touchend', onUp);
+window.addEventListener('resize',   () => { resize(); });
+
+document.getElementById('sound-btn').addEventListener('click', toggleSound);
+
+// ─── export / import ─────────────────────────────────────────────────────────
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function exportData() {
+  const payload = JSON.stringify({ version: 1, entries }, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+  a.download = `crescent-state-${TODAY}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const raw  = JSON.parse(e.target.result);
+      const incoming = Array.isArray(raw) ? raw : (raw.entries || []);
+      if (!Array.isArray(incoming)) throw new Error();
+
+      let added = 0, updated = 0;
+      for (const item of incoming) {
+        if (!item.date || typeof item.x !== 'number' || typeof item.y !== 'number') continue;
+        if (item.x < 0 || item.x > 1 || item.y < 0 || item.y > 1) continue;
+        const idx = entries.findIndex(ex => ex.date === item.date);
+        if (idx >= 0) { entries[idx] = item; updated++; }
+        else          { entries.push(item); added++; }
+      }
+      entries.sort((a, b) => a.date < b.date ? -1 : 1);
+      localStorage.setItem(KEY, JSON.stringify(entries));
+
+      // Refresh today's orb if today was in the import
+      const t = entries.find(ex => ex.date === TODAY);
+      if (t) { ox = t.x; oy = t.y; placed = true; setMoodWord(moodWord(ox, oy)); }
+      updateStreak();
+
+      const parts = [];
+      if (added)   parts.push(`${added} added`);
+      if (updated) parts.push(`${updated} updated`);
+      showToast(parts.length ? parts.join(', ') : 'nothing new');
+    } catch {
+      showToast('could not read file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('export-btn').addEventListener('click', exportData);
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-input').click();
+});
+document.getElementById('import-input').addEventListener('change', e => {
+  if (e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = '';
+});
+
+// ─── moons panel ─────────────────────────────────────────────────────────────
+
+function getMoonPhaseForDate(dateStr) {
+  const REF   = Date.UTC(2000, 0, 6, 18, 14);
+  const CYCLE = 29.53059 * 86400000;
+  const t     = new Date(dateStr + 'T12:00:00').getTime();
+  return ((t - REF) % CYCLE + CYCLE) % CYCLE / CYCLE;
+}
+
+function moonSVG(phase, moodRgb) {
+  const cx = 24, cy = 24, r = 20;
+  const [mr, mg, mb] = moodRgb.map(v => v | 0);
+  const lr = (mr + ((255 - mr) * 0.38)) | 0;
+  const lg = (mg + ((255 - mg) * 0.38)) | 0;
+  const lb = (mb + ((255 - mb) * 0.38)) | 0;
+  const illum = (1 - Math.cos(phase * Math.PI * 2)) / 2;
+  const N = v => Math.round(v * 10) / 10;
+  let out = '';
+
+  // Glow for gibbous / full entries
+  if (illum > 0.44) {
+    const ga = ((illum - 0.44) * 0.3).toFixed(3);
+    out += `<circle cx="${cx}" cy="${cy}" r="${N(r * 1.6)}" fill="rgba(${lr},${lg},${lb},${ga})"/>`;
+  }
+
+  // Dark disk
+  out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#09091a"/>`;
+
+  // Lit region
+  if (illum > 0.01) {
+    const rx = r * Math.cos(phase * Math.PI * 2);
+    const k  = 4 / 3;
+    let d;
+    if (phase < 0.5) {
+      d = `M${cx} ${N(cy-r)} A${r} ${r} 0 0 1 ${cx} ${N(cy+r)} C${N(cx+rx*k)} ${N(cy+r)} ${N(cx+rx*k)} ${N(cy-r)} ${cx} ${N(cy-r)}Z`;
+    } else {
+      d = `M${cx} ${N(cy+r)} A${r} ${r} 0 0 1 ${cx} ${N(cy-r)} C${N(cx-rx*k)} ${N(cy-r)} ${N(cx-rx*k)} ${N(cy+r)} ${cx} ${N(cy+r)}Z`;
+    }
+    out += `<path d="${d}" fill="rgb(${lr},${lg},${lb})" opacity="0.9"/>`;
+  }
+
+  // Rim
+  out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(175,192,220,${(0.07 + illum * 0.1).toFixed(3)})" stroke-width="0.5"/>`;
+  return out;
+}
+
+function buildMoonsPanel() {
+  const grid = document.getElementById('moons-grid');
+  const sorted = [...entries].reverse();  // newest first
+
+  if (!sorted.length) {
+    grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:48px 0;font-size:11px;color:rgba(255,255,255,0.18);letter-spacing:0.06em">no moods logged yet</p>`;
+    return;
+  }
+
+  grid.innerHTML = sorted.map(e => {
+    const phase  = getMoonPhaseForDate(e.date);
+    const rgb    = bilerp(e.x, e.y);
+    const inner  = moonSVG(phase, rgb);
+    const label  = new Date(e.date + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const word   = moodWord(e.x, e.y);
+    return `<div class="moon-cell"><svg viewBox="0 0 48 48" width="48" height="48">${inner}</svg><div class="moon-date">${label}</div><div class="moon-word">${word}</div></div>`;
+  }).join('');
+}
+
+document.getElementById('moons-btn').addEventListener('click', () => {
+  buildMoonsPanel();
+  document.getElementById('moons-panel').classList.add('open');
+});
+document.getElementById('moons-close').addEventListener('click', () => {
+  document.getElementById('moons-panel').classList.remove('open');
+});
+
+// ─── init ────────────────────────────────────────────────────────────────────
+
+load();
+resize();
+updateStreak();
+
+document.getElementById('date-text').textContent =
+  new Date().toLocaleDateString('en', { weekday:'long', month:'long', day:'numeric' }).toUpperCase();
+
+document.getElementById('phase-text').textContent = moonPhaseName(MOON_PHASE);
+document.getElementById('moon-hover').dataset.tip =
+  `${moonPhaseName(MOON_PHASE)} · ${Math.round(MOON_ILLUM * 100)}% illuminated`;
+
+if (placed) {
+  setMoodWord(moodWord(ox, oy));
+}
+
+requestAnimationFrame(render);
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "Crescent State: Wax & Wane",
+  "short_name": "Crescent State",
+  "description": "Place your mood on a 2D emotional space and watch your constellation grow.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080812",
+  "theme_color": "#080812",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
